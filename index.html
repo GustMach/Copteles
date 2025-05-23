@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Registro de Pedidos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: lightblue;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            border: 2px solid #4a90e2;
+        }
+
+        h1, h2 {
+            color: #4a90e2;
+        }
+
+        #register input#clientName {
+            width: calc(100% - 0px);
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #4a90e2;
+            border-radius: 5px;
+            background-color: #E6E6FA;
+            box-sizing: border-box;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #4a90e2;
+            border-radius: 5px;
+            background-color: #E6E6FA;
+        }
+
+        input[type="number"] {
+            width: 50px;
+            margin: 0 5px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+
+        button:hover {
+            background-color: #3a78c2;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            background: #E6E6FA;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #4a90e2;
+            color: #4a90e2;
+        }
+
+        .drink-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .drink-item label {
+            flex: 1;
+        }
+
+        .quantity-btn {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-size: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+
+        .quantity-btn:hover {
+            background-color: #3a78c2;
+        }
+
+        #invoice {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 20px;
+            border: 1px solid #4a90e2;
+        }
+
+        #timers {
+            margin-top: 10px;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Registro de Pedidos</h1>
+        <div id="menu">
+            <h2>Menú de Bebidas</h2>
+            <div class="drink-item">
+                <label for="drink1">Mojito - $5</label>
+                <input type="number" id="quantity1" min="0" value="0" />
+                <button class="quantity-btn" data-action="decrease">-</button>
+                <button class="quantity-btn" data-action="increase">+</button>
+            </div>
+            <div class="drink-item">
+                <label for="drink2">Piña Colada - $6</label>
+                <input type="number" id="quantity2" min="0" value="0" />
+                <button class="quantity-btn" data-action="decrease">-</button>
+                <button class="quantity-btn" data-action="increase">+</button>
+            </div>
+            <div class="drink-item">
+                <label for="drink3">Daiquiri - $4</label>
+                <input type="number" id="quantity3" min="0" value="0" />
+                <button class="quantity-btn" data-action="decrease">-</button>
+                <button class="quantity-btn" data-action="increase">+</button>
+            </div>
+        </div>
+        <div id="register">
+            <h2>Regístrate como Cliente</h2>
+            <input type="text" id="clientName" placeholder="Nombre del Cliente" required />
+            <button id="registerButton">Registrar Pedido</button>
+        </div>
+        <div id="orders">
+            <h2>Pedidos Registrados</h2>
+            <ul id="orderList"></ul>
+            <div id="timers"></div>
+        </div>
+        <div id="invoice" style="display: none;">
+            <h2>Factura</h2>
+            <p>Cliente: <span id="invoiceClientName"></span></p>
+            <p>Bebidas:</p>
+            <ul id="invoiceDrinks"></ul>
+            <p>Total: <span id="invoiceTotal"></span></p>
+            <p id="invoiceTotalBeverages"></p>
+            <button id="downloadPdfButton">Descargar PDF</button>
+        </div>
+    </div>
+
+<script>
+    let total = 0;
+    let countdownTimers = [];
+
+    document.getElementById('registerButton').addEventListener('click', function() {
+        const clientName = document.getElementById('clientName').value.trim();
+
+        if (clientName) {
+            const orderList = document.getElementById('orderList');
+            const li = document.createElement('li');
+            const currentTime = new Date().toLocaleTimeString();
+
+            const quantity1 = parseInt(document.getElementById('quantity1').value) || 0;
+            const quantity2 = parseInt(document.getElementById('quantity2').value) || 0;
+            const quantity3 = parseInt(document.getElementById('quantity3').value) || 0;
+
+            let orderDetails = '';
+            total = 0;
+            let totalBeverages = quantity1 + quantity2 + quantity3;
+
+            if (quantity1 > 0) {
+                orderDetails += `Mojito x${quantity1}, `;
+                total += 5 * quantity1;
+            }
+            if (quantity2 > 0) {
+                orderDetails += `Piña Colada x${quantity2}, `;
+                total += 6 * quantity2;
+            }
+            if (quantity3 > 0) {
+                orderDetails += `Daiquiri x${quantity3}, `;
+                total += 4 * quantity3;
+            }
+
+            if (orderDetails) {
+                li.textContent = `Cliente: ${clientName}, Pedido: ${orderDetails.slice(0, -2)}, Hora de Salida: ${currentTime}`;
+                orderList.appendChild(li);
+
+                document.getElementById('invoiceClientName').textContent = clientName;
+                const invoiceDrinks = document.getElementById('invoiceDrinks');
+                invoiceDrinks.innerHTML = '';
+
+                if (quantity1 > 0) {
+                    const drinkItem = document.createElement('li');
+                    drinkItem.textContent = `Mojito x${quantity1} - $${5 * quantity1}`;
+                    invoiceDrinks.appendChild(drinkItem);
+                }
+                if (quantity2 > 0) {
+                    const drinkItem = document.createElement('li');
+                    drinkItem.textContent = `Piña Colada x${quantity2} - $${6 * quantity2}`;
+                    invoiceDrinks.appendChild(drinkItem);
+                }
+                if (quantity3 > 0) {
+                    const drinkItem = document.createElement('li');
+                    drinkItem.textContent = `Daiquiri x${quantity3} - $${4 * quantity3}`;
+                    invoiceDrinks.appendChild(drinkItem);
+                }
+
+                document.getElementById('invoiceTotal').textContent = `$${total}`;
+                document.getElementById('invoiceTotalBeverages').textContent = `Cantidad total de bebidas: ${totalBeverages}`;
+                document.getElementById('invoice').style.display = 'block';
+
+                document.getElementById('clientName').value = '';
+                document.getElementById('quantity1').value = 0;
+                document.getElementById('quantity2').value = 0;
+                document.getElementById('quantity3').value = 0;
+
+                startCountdown(totalBeverages);
+            } else {
+                alert('Por favor, selecciona al menos una bebida.');
+            }
+        } else {
+            alert('Por favor, ingresa el nombre del cliente.');
+        }
+    });
+
+    function startCountdown(totalBeverages) {
+        let countdownMinutes = 2;
+
+        if (totalBeverages > 15) {
+            countdownMinutes = 10;
+        } else if (totalBeverages >= 10) {
+            countdownMinutes = 7;
+        } else if (totalBeverages >= 5) {
+            countdownMinutes = 5;
+        }
+
+        let timeLeft = countdownMinutes * 60;
+        const timerDiv = document.createElement('div');
+        document.getElementById('timers').appendChild(timerDiv);
+
+        const timerIndex = countdownTimers.length;
+
+        countdownTimers.push(setInterval(function() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerDiv.textContent = `Tiempo de preparación: ${minutes} minutos y ${seconds} segundos`;
+
+            if (timeLeft <= 0) {
+                clearInterval(countdownTimers[timerIndex]);
+                timerDiv.textContent = "¡Tiempo de preparación finalizado!";
+            }
+
+            timeLeft--;
+        }, 1000));
+    }
+
+    const quantityBtns = document.querySelectorAll('.quantity-btn');
+
+    quantityBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const action = this.dataset.action;
+            const input = this.parentNode.querySelector('input');
+            let quantity = parseInt(input.value) || 0;
+
+            if (action === 'increase') {
+                quantity++;
+            } else if (action === 'decrease' && quantity > 0) {
+                quantity--;
+            }
+
+            input.value = quantity;
+        });
+    });
+
+    document.getElementById('downloadPdfButton').addEventListener('click', function() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        // Datos de factura
+        const clientName = document.getElementById('invoiceClientName').textContent;
+        const invoiceDrinks = document.getElementById('invoiceDrinks').children;
+        const total = document.getElementById('invoiceTotal').textContent;
+        const totalBeverages = document.getElementById('invoiceTotalBeverages').textContent;
+
+        // Fecha y número de factura
+        const today = new Date();
+        const fecha = today.toLocaleDateString();
+        const hora = today.toLocaleTimeString();
+        const facturaNum = "F" + Math.floor(Math.random() * 1000000);
+
+        // Encabezado
+        doc.setFontSize(18);
+        doc.setFont("helvetica", "bold");
+        doc.text("Bar El Buen Gusto", 105, 15, null, null, "center");
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Fecha: ${fecha}  Hora: ${hora}`, 10, 25);
+        doc.text(`Factura N°: ${facturaNum}`, 10, 30);
+        doc.line(10, 32, 200, 32); // línea horizontal
+
+        // Cliente
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Cliente:`, 10, 42);
+        doc.setFont("helvetica", "normal");
+        doc.text(clientName, 35, 42);
+
+        // Tabla encabezados
+        const startY = 52;
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text("Bebida", 10, startY);
+        doc.text("Cantidad", 80, startY, null, null, "right");
+        doc.text("P. Unitario", 120, startY, null, null, "right");
+        doc.text("Subtotal", 180, startY, null, null, "right");
+        doc.line(10, startY + 2, 200, startY + 2);
+
+        // Tabla datos
+        let y = startY + 10;
+        doc.setFont("helvetica", "normal");
+        for(let i = 0; i < invoiceDrinks.length; i++) {
+            let text = invoiceDrinks[i].textContent; 
+            // Parsear el texto, formato: "Bebida xCantidad - $Subtotal"
+            // Ejemplo: "Mojito x2 - $10"
+            let parts = text.split(' - ');
+            let subtotal = parts[1].replace('$','');
+            let bebidaCantidad = parts[0].split(' x');
+            let bebida = bebidaCantidad[0];
+            let cantidad = bebidaCantidad[1];
+            let precioUnitario = (subtotal / cantidad).toFixed(2);
+
+            doc.text(bebida, 10, y);
+            doc.text(cantidad, 80, y, null, null, "right");
+            doc.text(`$${precioUnitario}`, 120, y, null, null, "right");
+            doc.text(`$${subtotal}`, 180, y, null, null, "right");
+            y += 8;
+        }
+        doc.line(10, y, 200, y);
+
+        // Total
+        y += 10;
+        doc.setFont("helvetica", "bold");
+        doc.text("Total:", 120, y, null, null, "right");
+        doc.text(total, 180, y, null, null, "right");
+
+        // Cantidad total bebidas
+        y += 10;
+        doc.setFont("helvetica", "normal");
+        doc.text(totalBeverages, 10, y);
+
+        // Nota final
+        y += 15;
+        doc.setFontSize(9);
+        doc.text("Gracias por su compra. ¡Vuelva pronto!", 105, y, null, null, "center");
+
+        // Guardar PDF
+        doc.save("factura.pdf");
+    });
+</script>
+</body>
+</html>
+
